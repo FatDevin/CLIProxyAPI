@@ -451,6 +451,7 @@ nonstream-keepalive-interval: 0
 #       X-Custom-Header: "custom-value"
 #     api-key-entries:
 #       - api-key: "sk-or-v1-...b780"
+#         api-key-env: "MY_PROVIDER_API_KEY" # optional: resolve the key from this environment variable
 #         weight: 5 # optional: weighted-round-robin share; omitted defaults to 1; maximum 1,000,000
 #         proxy-url: "socks5://proxy.example.com:1080" # optional: per-key proxy override
 #         # proxy-url: "direct" # optional: explicit direct connect for this credential

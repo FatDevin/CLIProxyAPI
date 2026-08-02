@@ -2,6 +2,7 @@ package synthesizer
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -53,7 +54,11 @@ func (s *ConfigSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth,
 	// xAI API Keys
 	out = append(out, s.synthesizeXAIKeys(ctx)...)
 	// OpenAI-compat
-	out = append(out, s.synthesizeOpenAICompat(ctx)...)
+	openAICompatAuths, errOpenAICompat := s.synthesizeOpenAICompat(ctx)
+	if errOpenAICompat != nil {
+		return nil, fmt.Errorf("synthesize OpenAI compatibility API key auths: %w", errOpenAICompat)
+	}
+	out = append(out, openAICompatAuths...)
 	// Vertex-compat
 	out = append(out, s.synthesizeVertexCompat(ctx)...)
 
@@ -260,8 +265,25 @@ func (s *ConfigSynthesizer) synthesizeCodexStyleKeys(ctx *SynthesisContext, entr
 	return out
 }
 
+func resolveOpenAICompatibilityAPIKey(entry config.OpenAICompatibilityAPIKey) (string, error) {
+	envName := strings.TrimSpace(entry.APIKeyEnv)
+	if envName != "" {
+		key := strings.TrimSpace(os.Getenv(envName))
+		if key == "" {
+			return "", fmt.Errorf("openai compatibility api-key-env %s is empty", envName)
+		}
+		return key, nil
+	}
+
+	key := strings.TrimSpace(entry.APIKey)
+	if key == "" {
+		return "", fmt.Errorf("openai compatibility missing api-key")
+	}
+	return key, nil
+}
+
 // synthesizeOpenAICompat creates Auth entries for OpenAI-compatible providers.
-func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*coreauth.Auth {
+func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) ([]*coreauth.Auth, error) {
 	cfg := ctx.Config
 	now := ctx.Now
 	idGen := ctx.IDGenerator
@@ -285,7 +307,10 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 		createdEntries := 0
 		for j := range compat.APIKeyEntries {
 			entry := &compat.APIKeyEntries[j]
-			key := strings.TrimSpace(entry.APIKey)
+			key, errResolveKey := resolveOpenAICompatibilityAPIKey(*entry)
+			if errResolveKey != nil {
+				return nil, fmt.Errorf("openai-compatibility[%d].api-key-entries[%d]: %w", i, j, errResolveKey)
+			}
 			proxyURL := strings.TrimSpace(entry.ProxyURL)
 			idKind := fmt.Sprintf("openai-compatibility:%s", providerName)
 			id, token := idGen.Next(idKind, key, base, proxyURL)
@@ -368,7 +393,7 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 			out = append(out, a)
 		}
 	}
-	return out
+	return out, nil
 }
 
 // synthesizeVertexCompat creates Auth entries for Vertex-compatible providers.

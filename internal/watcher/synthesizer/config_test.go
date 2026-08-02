@@ -456,20 +456,6 @@ func TestConfigSynthesizer_OpenAICompat(t *testing.T) {
 			wantLen: 2,
 		},
 		{
-			name: "empty APIKeyEntries included (legacy)",
-			compat: []config.OpenAICompatibility{
-				{
-					Name:    "EmptyKeys",
-					BaseURL: "https://empty.api.com",
-					APIKeyEntries: []config.OpenAICompatibilityAPIKey{
-						{APIKey: ""},
-						{APIKey: "   "},
-					},
-				},
-			},
-			wantLen: 2,
-		},
-		{
 			name: "without APIKeyEntries (fallback)",
 			compat: []config.OpenAICompatibility{
 				{
